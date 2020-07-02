@@ -41,7 +41,12 @@
       var container;
       var camera, scene, renderer;
       var controller;
+	  
+	  var reticle;
 
+			var hitTestSource = null;
+			var hitTestSourceRequested = false;
+			
       var mouseX = 0, mouseY = 0;
 
       var windowHalfX = window.innerWidth / 2;
@@ -123,8 +128,17 @@
 
       controller = renderer.xr.getController( 0 );
       controller.addEventListener( 'select', onSelect );
-      scene.add( controller );
-
+      scene.add( controller );	  
+	  
+	  
+	  reticle = new THREE.Mesh(
+					new THREE.RingBufferGeometry( 0.15, 0.2, 32 ).rotateX( - Math.PI / 2 ),
+					new THREE.MeshBasicMaterial()
+				);
+				reticle.matrixAutoUpdate = false;
+				reticle.visible = false;
+				scene.add( reticle );
+				
 
       function onWindowResize() {
 
@@ -142,12 +156,61 @@
 
       }
 
-      function render() {
 
-        renderer.render( scene, camera );
-        console.log('renedered');
+			function render( timestamp, frame ) {
 
-      }
+				if ( frame ) {
+
+					var referenceSpace = renderer.xr.getReferenceSpace();
+					var session = renderer.xr.getSession();
+
+					if ( hitTestSourceRequested === false ) {
+
+						session.requestReferenceSpace( 'viewer' ).then( function ( referenceSpace ) {
+
+							session.requestHitTestSource( { space: referenceSpace } ).then( function ( source ) {
+
+								hitTestSource = source;
+
+							} );
+
+						} );
+
+						session.addEventListener( 'end', function () {
+
+							hitTestSourceRequested = false;
+							hitTestSource = null;
+
+						} );
+
+						hitTestSourceRequested = true;
+
+					}
+
+					if ( hitTestSource ) {
+
+						var hitTestResults = frame.getHitTestResults( hitTestSource );
+
+						if ( hitTestResults.length ) {
+
+							var hit = hitTestResults[ 0 ];
+
+							reticle.visible = true;
+							reticle.matrix.fromArray( hit.getPose( referenceSpace ).transform.matrix );
+
+						} else {
+
+							reticle.visible = false;
+
+						}
+
+					}
+
+				}
+
+				renderer.render( scene, camera );
+
+			}
 
     </script>
   </body>
