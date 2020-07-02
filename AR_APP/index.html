@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <title>AR</title>
+    <style>
+		#info{
+			position: absolute;
+			top: 0px;
+			width: 100%;
+			padding: 10px;
+			text-align: center;
+			color: blue;
+		}
+		.output {
+			text-align: center;
+			color: white;
+		}
+		#overlay {
+			position: absolute;
+			z-index: 2;
+			top: 10;
+			left: 0;
+			width: 30%;
+			height: 100%;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			background: rgba(0,0,0,0.7);
+		}
+		</style>
+  </head>
+  <body>
+    <script type="module">
+
+      import * as THREE from './build/three.module.js';
+      import { ARButton } from './ARButton.js';
+      import { MTLLoader } from './MTLLoader.js';
+      import { OBJLoader } from './OBJLoader.js';
+
+      var container;
+      var camera, scene, renderer;
+      var controller;
+
+      var mouseX = 0, mouseY = 0;
+
+      var windowHalfX = window.innerWidth / 2;
+      var windowHalfY = window.innerHeight / 2;
+
+
+      init();
+      animate();
+
+
+      function init() {
+
+        container = document.createElement( 'div' );
+        document.body.appendChild( container );
+
+        // scene
+
+        scene = new THREE.Scene();
+
+        camera = new THREE.PerspectiveCamera( 70, window.innerWidth / window.innerHeight, 1, 2000 );
+
+        var light = new THREE.HemisphereLight( 0xffffff, 0xbbbbff, 1 );
+				light.position.set( 0.5, 1, 0.25 );
+				scene.add( light );
+
+
+        // model
+
+        var onProgress = function ( xhr ) {
+
+          if ( xhr.lengthComputable ) {
+
+            var percentComplete = xhr.loaded / xhr.total * 100;
+            console.log( Math.round( percentComplete, 2 ) + '% downloaded' );
+
+          }
+
+        };
+
+        var onError = function () { };
+
+        var manager = new THREE.LoadingManager();
+
+
+        renderer = new THREE.WebGLRenderer();
+        renderer.setPixelRatio( window.devicePixelRatio );
+        renderer.setSize( window.innerWidth, window.innerHeight );
+        renderer.xr.enabled = true;
+        container.appendChild( renderer.domElement );
+
+        document.body.appendChild( ARButton.createButton( renderer ) );
+
+
+        window.addEventListener( 'resize', onWindowResize, false );
+
+      }
+
+      function onSelect() {
+
+        new MTLLoader( manager )
+          .setPath( '../static/models/obj/male02/' )
+          .load( 'male02.mtl', function ( materials ) {
+
+            materials.preload();
+
+            new OBJLoader( manager )
+              .setMaterials( materials )
+              .setPath( '../static/models/obj/male02/' )
+              .load( 'male02.obj', function ( object ) {
+
+                object.position.y = - 95;
+                scene.add( object );
+
+              }, onProgress, onError );
+
+          } );
+
+      }
+
+      controller = renderer.xr.getController( 0 );
+      controller.addEventListener( 'select', onSelect );
+      scene.add( controller );
+
+
+      function onWindowResize() {
+
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+
+        renderer.setSize( window.innerWidth, window.innerHeight );
+
+      }
+
+
+      function animate() {
+
+        renderer.setAnimationLoop( render );
+
+      }
+
+      function render() {
+
+        renderer.render( scene, camera );
+        console.log('renedered');
+
+      }
+
+    </script>
+  </body>
+</html>
