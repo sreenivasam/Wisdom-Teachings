@@ -68,10 +68,14 @@
 								if ( child.isMesh ) {
 
 									roughnessMipmapper.generateMipmaps( child.material );
+									
+									child.geometry.center();
 
 								}
 
 							} );
+							
+							gltf.scene.scale.set(0.1, 0.1, 0.1);
 
 							scene.add( gltf.scene );
 
